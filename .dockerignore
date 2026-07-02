@@ -1,0 +1,7 @@
+node_modules
+dist
+code-tools
+e2e
+.git
+*.md
+.gitignore
