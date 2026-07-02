@@ -1,0 +1,6 @@
+services:
+  app:
+    image: oconnorj00/yt-to-mp3:latest
+    ports:
+      - "8080:8080"
+    restart: unless-stopped

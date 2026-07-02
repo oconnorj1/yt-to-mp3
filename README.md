@@ -4,10 +4,8 @@
   <img src="frontend/public/yt2mp3logo.png" alt="yt-to-mp3" width="400" />
 </p>
 
-[![Docker Pulls - Backend](https://img.shields.io/docker/pulls/oconnorj00/yt-to-mp3-backend)](https://hub.docker.com/r/oconnorj00/yt-to-mp3-backend "Docker Pulls - Backend")
-[![Docker Image Size - Backend](https://img.shields.io/docker/image-size/oconnorj00/yt-to-mp3-backend)](https://hub.docker.com/r/oconnorj00/yt-to-mp3-backend "Docker Image Size - Backend")
-[![Docker Pulls - Frontend](https://img.shields.io/docker/pulls/oconnorj00/yt-to-mp3-frontend)](https://hub.docker.com/r/oconnorj00/yt-to-mp3-frontend "Docker Pulls - Frontend")
-[![Docker Image Size - Frontend](https://img.shields.io/docker/image-size/oconnorj00/yt-to-mp3-frontend)](https://hub.docker.com/r/oconnorj00/yt-to-mp3-frontend "Docker Image Size - Frontend")
+[![Docker Pulls](https://img.shields.io/docker/pulls/oconnorj00/yt-to-mp3)](https://hub.docker.com/r/oconnorj00/yt-to-mp3 "Docker Pulls")
+[![Docker Image Size](https://img.shields.io/docker/image-size/oconnorj00/yt-to-mp3)](https://hub.docker.com/r/oconnorj00/yt-to-mp3 "Docker Image Size")
 
 Paste a YouTube link, get an MP3. Containerized, one command to run.
 
@@ -35,22 +33,14 @@ Paste a YouTube link, get an MP3. Containerized, one command to run.
 docker compose up --build
 ```
 
-### Use pre-built images with Docker Compose
+### Use pre-built image
 
 ```yaml
 services:
-  backend:
-    image: oconnorj00/yt-to-mp3-backend:latest
-    ports:
-      - "3001:3001"
-    restart: unless-stopped
-
-  frontend:
-    image: oconnorj00/yt-to-mp3-frontend:latest
+  app:
+    image: oconnorj00/yt-to-mp3:latest
     ports:
       - "8080:8080"
-    depends_on:
-      - backend
     restart: unless-stopped
 ```
 
@@ -59,8 +49,6 @@ docker compose up
 ```
 
 Open [http://localhost:8080](http://localhost:8080), paste a YouTube URL, click Download.
-- Frontend: port **8080**
-- Backend API: port **3001**
 
 ## Features
 
@@ -68,22 +56,21 @@ Open [http://localhost:8080](http://localhost:8080), paste a YouTube URL, click 
 - Runs entirely in Docker — no local dependencies needed
 - React frontend with loading and error states
 - yt-dlp + ffmpeg under the hood for best-quality MP3s
+- Real-time download progress bar
+- Dark mode support
 
 ## Architecture
 
 ```
-┌──────────┐     ┌──────────┐     ┌─────────────────────┐
-│ Browser  │────▶│  Nginx   │────▶│  Express (backend)  │
-│ :8080    │     │  :8080   │     │  :3001              │
-└──────────┘     └──────────┘     └─────────────────────┘
-                                          │
-                                    ┌─────┴─────┐
-                                    │  yt-dlp    │
-                                    │  + ffmpeg  │
-                                    └───────────┘
+┌──────────┐     ┌──────────────────────────────────────┐
+│ Browser  │────▶│  Node + Express                       │
+│ :8080    │     │  - API routes (/api/*)                │
+│          │     │  - Static frontend (React SPA)        │
+│          │     │  - yt-dlp + ffmpeg                    │
+└──────────┘     └──────────────────────────────────────┘
 ```
 
-The frontend (React) calls `POST /api/download` through Nginx, which proxies to the backend. The backend spawns yt-dlp to download and convert the audio to MP3, then streams the file back to the browser.
+A single container runs both the React frontend (served as static files) and the Node.js/Express backend. No Nginx or separate frontend container needed.
 
 ## Tech Stack
 
@@ -98,22 +85,21 @@ The frontend (React) calls `POST /api/download` through Nginx, which proxies to 
 ## Project Structure
 
 ```
-├── backend/             Express API (port 3001)
+├── backend/             Express API
 │   └── src/
 │       ├── index.ts           Server entry
 │       └── routes/download.ts POST /api/download
-├── frontend/            React + Vite app (port 8080)
+├── frontend/            React + Vite app
 │   ├── src/
 │   │   ├── App.tsx            Main component
 │   │   ├── components/
 │   │   │   └── UrlInput.tsx   URL input + download button
 │   │   └── main.tsx           App entry
-│   └── nginx/default.conf     Nginx proxy config
+│   └── nginx/default.conf     Nginx proxy config (deprecated)
 ├── e2e/                 Playwright tests
 │   └── tests/download.spec.ts
 ├── docker-compose.yml
-├── Dockerfile.backend
-└── Dockerfile.frontend
+└── Dockerfile
 ```
 
 ## Development
