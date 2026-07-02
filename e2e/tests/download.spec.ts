@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('yt-to-mp3', () => {
-  test('page loads with title and form', async ({ page }) => {
+  test('page loads with logo and form', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1')).toHaveText('yt-to-mp3');
+    await expect(page.locator('img[alt="yt-to-mp3"]')).toBeVisible();
     await expect(page.locator('input[type="text"]')).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toHaveText('Download');
   });
