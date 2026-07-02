@@ -176,6 +176,44 @@ body {
   color: var(--text);
 }
 
+.retry-btn {
+  margin-top: 0.75rem;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 2px solid var(--accent-start);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--accent-start);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.retry-btn:hover {
+  background: var(--accent-start);
+  color: #fff;
+}
+
+.error-block {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.progress-bar-skeleton {
+  height: 100%;
+  background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+  border-radius: 999px;
+  width: 30%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
 .progress-bar-container {
   margin-top: 1.5rem;
   display: flex;

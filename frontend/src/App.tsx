@@ -44,11 +44,16 @@ function App() {
     setJobStatus('pending');
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
       const res = await fetch(`${API_BASE}/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -92,10 +97,20 @@ function App() {
       };
     } catch (err) {
       setJobStatus('failed');
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('Request timed out. The server may be busy. Please try again.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Something went wrong');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRetry = () => {
+    setJobStatus('idle');
+    setError(null);
+    setProgress(0);
   };
 
   return (
@@ -125,10 +140,19 @@ function App() {
           Paste a YouTube URL and download the audio as MP3
         </p>
         <UrlInput onDownload={handleSubmit} loading={loading} />
-        {(jobStatus === 'downloading' || jobStatus === 'completed') && (
-          <ProgressBar progress={progress} />
+        {(jobStatus === 'pending' || jobStatus === 'downloading' || jobStatus === 'completed') && (
+          <ProgressBar progress={progress} status={jobStatus} />
         )}
-        {error && <p className="error-message">{error}</p>}
+        {error && (
+          <div className="error-block">
+            <p className="error-message">{error}</p>
+            {jobStatus === 'failed' && (
+              <button className="retry-btn" onClick={handleRetry}>
+                Try Again
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

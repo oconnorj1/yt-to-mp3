@@ -63,6 +63,8 @@ function startDownload(job: Job) {
 
   const ytProcess = spawn('yt-dlp', [
     '--socket-timeout', '30',
+    '--retries', '3',
+    '--retry-sleep', '5',
     job.url,
     '-x',
     '--audio-format', 'mp3',
@@ -73,6 +75,16 @@ function startDownload(job: Job) {
   ]);
 
   processes.set(job.id, ytProcess);
+
+  const processTimeout = setTimeout(() => {
+    if (processes.has(job.id)) {
+      ytProcess.kill('SIGTERM');
+      job.status = 'failed';
+      job.error = 'Download timed out after 10 minutes. Try again later.';
+      emitEvent(job.id, { type: 'failed', error: job.error });
+      processes.delete(job.id);
+    }
+  }, 10 * 60 * 1000);
 
   let stderrOutput = '';
 
@@ -88,6 +100,7 @@ function startDownload(job: Job) {
 
   ytProcess.on('close', (code) => {
     processes.delete(job.id);
+    clearTimeout(processTimeout);
     if (code !== 0) {
       job.status = 'failed';
       job.error = stderrOutput.trim() || `Process exited with code ${code}`;
@@ -114,6 +127,7 @@ function startDownload(job: Job) {
 
   ytProcess.on('error', (err) => {
     processes.delete(job.id);
+    clearTimeout(processTimeout);
     job.status = 'failed';
     job.error = err.message;
     emitEvent(job.id, { type: 'failed', error: err.message });
