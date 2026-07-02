@@ -1,11 +1,25 @@
 # yt-to-mp3
 
+[![Docker Pulls - Backend](https://img.shields.io/docker/pulls/oconnorj00/yt-to-mp3-backend)](https://hub.docker.com/r/oconnorj00/yt-to-mp3-backend)
+[![Docker Image Size - Backend](https://img.shields.io/docker/image-size/oconnorj00/yt-to-mp3-backend)](https://hub.docker.com/r/oconnorj00/yt-to-mp3-backend)
+[![Docker Pulls - Frontend](https://img.shields.io/docker/pulls/oconnorj00/yt-to-mp3-frontend)](https://hub.docker.com/r/oconnorj00/yt-to-mp3-frontend)
+[![Docker Image Size - Frontend](https://img.shields.io/docker/image-size/oconnorj00/yt-to-mp3-frontend)](https://hub.docker.com/r/oconnorj00/yt-to-mp3-frontend)
+
 Paste a YouTube link, get an MP3. Containerized, one command to run.
 
 ## Quick Start
 
+### Build from source
+
 ```bash
 docker compose up --build
+```
+
+### Pull from Docker Hub
+
+```bash
+docker pull oconnorj00/yt-to-mp3-backend:latest
+docker pull oconnorj00/yt-to-mp3-frontend:latest
 ```
 
 Open [http://localhost:8080](http://localhost:8080), paste a YouTube URL, click Download.
