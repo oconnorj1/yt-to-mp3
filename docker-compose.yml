@@ -1,18 +1,8 @@
 services:
-  backend:
+  app:
     build:
       context: .
-      dockerfile: Dockerfile.backend
-    ports:
-      - "3001:3001"
-    restart: unless-stopped
-
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
-    depends_on:
-      - backend
     restart: unless-stopped
