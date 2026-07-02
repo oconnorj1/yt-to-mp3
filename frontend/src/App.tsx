@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import UrlInput from './components/UrlInput';
 
 const API_BASE = '/api';
@@ -6,6 +6,26 @@ const API_BASE = '/api';
 function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark' || saved === 'light') {
+      setTheme(saved);
+    } else {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(prefersDark ? 'dark' : 'light');
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
   const handleDownload = async (url: string) => {
     setLoading(true);
@@ -25,14 +45,24 @@ function App() {
 
       const blob = await response.blob();
       const disposition = response.headers.get('Content-Disposition');
-      const match = disposition?.match(/filename="?(.+?)"?$/);
-      const filename = match?.[1] || 'audio.mp3';
+      let filename = 'audio.mp3';
+      if (disposition) {
+        const utfMatch = disposition.match(/filename\*=(?:UTF-8'')?([^;\s]+)/);
+        if (utfMatch) {
+          filename = decodeURIComponent(utfMatch[1]);
+        } else {
+          const asciiMatch = disposition.match(/filename=(?:["']?)([^"';]+)(?:["']?)/);
+          if (asciiMatch) {
+            filename = asciiMatch[1];
+          }
+        }
+      }
 
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = filename;
       a.click();
-      URL.revokeObjectURL(a.href);
+      setTimeout(() => URL.revokeObjectURL(a.href), 1_000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -41,33 +71,34 @@ function App() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'system-ui, sans-serif',
-      background: '#f5f5f5',
-      margin: 0,
-    }}>
-      <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>yt-to-mp3</h1>
-      <p style={{ color: '#666', marginBottom: '2rem' }}>
-        Paste a YouTube URL and download the audio as MP3
-      </p>
-      <UrlInput onDownload={handleDownload} loading={loading} />
-      {error && (
-        <p style={{
-          color: '#e53e3e',
-          marginTop: '1rem',
-          maxWidth: 500,
-          textAlign: 'center',
-          fontSize: '0.875rem',
-          wordBreak: 'break-word',
-        }}>
-          {error}
+    <div className="app-container">
+      <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+        {theme === 'light' ? (
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        )}
+      </button>
+      <div className="card">
+        <h1 className="title">yt-to-mp3</h1>
+        <p className="subtitle">
+          Paste a YouTube URL and download the audio as MP3
         </p>
-      )}
+        <UrlInput onDownload={handleDownload} loading={loading} />
+        {error && <p className="error-message">{error}</p>}
+      </div>
     </div>
   );
 }
