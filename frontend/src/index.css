@@ -70,11 +70,9 @@ body {
   transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
-.title {
-  font-size: 1.75rem;
-  font-weight: 700;
+.logo {
+  max-height: 360px;
   margin-bottom: 0.5rem;
-  letter-spacing: -0.02em;
 }
 
 .subtitle {

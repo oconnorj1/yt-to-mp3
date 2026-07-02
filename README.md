@@ -1,5 +1,9 @@
 # yt-to-mp3
 
+<p align="center">
+  <img src="frontend/public/yt2mp3logo.png" alt="yt-to-mp3" width="400" />
+</p>
+
 [![Docker Pulls - Backend](https://img.shields.io/docker/pulls/oconnorj00/yt-to-mp3-backend)](https://hub.docker.com/r/oconnorj00/yt-to-mp3-backend "Docker Pulls - Backend")
 [![Docker Image Size - Backend](https://img.shields.io/docker/image-size/oconnorj00/yt-to-mp3-backend)](https://hub.docker.com/r/oconnorj00/yt-to-mp3-backend "Docker Image Size - Backend")
 [![Docker Pulls - Frontend](https://img.shields.io/docker/pulls/oconnorj00/yt-to-mp3-frontend)](https://hub.docker.com/r/oconnorj00/yt-to-mp3-frontend "Docker Pulls - Frontend")

@@ -92,7 +92,7 @@ function App() {
         )}
       </button>
       <div className="card">
-        <h1 className="title">yt-to-mp3</h1>
+        <img src="/yt2mp3logo.png" alt="yt-to-mp3" className="logo" />
         <p className="subtitle">
           Paste a YouTube URL and download the audio as MP3
         </p>
