@@ -1,12 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import UrlInput from './components/UrlInput';
+import ProgressBar from './components/ProgressBar';
 
 const API_BASE = '/api';
 
 function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [jobStatus, setJobStatus] = useState<'idle' | 'pending' | 'downloading' | 'completed' | 'failed'>('idle');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('theme');
@@ -27,43 +31,67 @@ function App() {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
-  const handleDownload = async (url: string) => {
+  useEffect(() => {
+    return () => {
+      eventSourceRef.current?.close();
+    };
+  }, []);
+
+  const handleSubmit = async (url: string) => {
     setLoading(true);
     setError(null);
+    setProgress(0);
+    setJobStatus('pending');
 
     try {
-      const response = await fetch(`${API_BASE}/download`, {
+      const res = await fetch(`${API_BASE}/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.details || data.error || 'Download failed');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to create job');
       }
 
-      const blob = await response.blob();
-      const disposition = response.headers.get('Content-Disposition');
-      let filename = 'audio.mp3';
-      if (disposition) {
-        const utfMatch = disposition.match(/filename\*=(?:UTF-8'')?([^;\s]+)/);
-        if (utfMatch) {
-          filename = decodeURIComponent(utfMatch[1]);
-        } else {
-          const asciiMatch = disposition.match(/filename=(?:["']?)([^"';]+)(?:["']?)/);
-          if (asciiMatch) {
-            filename = asciiMatch[1];
-          }
+      const { id } = await res.json();
+      setJobStatus('downloading');
+
+      const es = new EventSource(`${API_BASE}/jobs/${id}/progress`);
+      eventSourceRef.current = es;
+
+      es.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'progress') {
+          setProgress(data.progress);
+        } else if (data.type === 'completed') {
+          setProgress(100);
+          setJobStatus('completed');
+          es.close();
+          eventSourceRef.current = null;
+
+          const a = document.createElement('a');
+          a.href = `${API_BASE}/jobs/${id}/file`;
+          a.download = data.filename || 'audio.mp3';
+          a.click();
+        } else if (data.type === 'failed') {
+          setJobStatus('failed');
+          setError(data.error || 'Download failed');
+          es.close();
+          eventSourceRef.current = null;
         }
-      }
+      };
 
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1_000);
+      es.onerror = () => {
+        setJobStatus('failed');
+        setError('Connection lost. Please try again.');
+        es.close();
+        eventSourceRef.current = null;
+      };
     } catch (err) {
+      setJobStatus('failed');
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
@@ -96,7 +124,10 @@ function App() {
         <p className="subtitle">
           Paste a YouTube URL and download the audio as MP3
         </p>
-        <UrlInput onDownload={handleDownload} loading={loading} />
+        <UrlInput onDownload={handleSubmit} loading={loading} />
+        {(jobStatus === 'downloading' || jobStatus === 'completed') && (
+          <ProgressBar progress={progress} />
+        )}
         {error && <p className="error-message">{error}</p>}
       </div>
     </div>
