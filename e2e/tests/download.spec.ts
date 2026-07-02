@@ -16,12 +16,25 @@ test.describe('yt-to-mp3', () => {
     await page.locator('button[type="submit"]').click();
 
     // The backend validates URL format, so we should see an error
-    await expect(page.locator('text=Download failed')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('text=Invalid URL')).toBeVisible({ timeout: 15_000 });
   });
 
   test('button is disabled when input is empty', async ({ page }) => {
     await page.goto('/');
     const button = page.locator('button[type="submit"]');
     await expect(button).toBeDisabled();
+  });
+
+  test('downloads MP3 for a valid YouTube URL', async ({ page }) => {
+    await page.goto('/');
+
+    const downloadPromise = page.waitForEvent('download', { timeout: 120_000 });
+
+    const input = page.locator('input[type="text"]');
+    await input.fill('https://www.youtube.com/watch?v=VCuS3enPwKI');
+    await page.locator('button[type="submit"]').click();
+
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/\.mp3$/i);
   });
 });

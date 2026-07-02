@@ -34,5 +34,9 @@ docker-data/
 *.log
 npm-debug.log*
 
+# E2E test artifacts
+e2e/playwright-report/
+e2e/test-results/
+
 # Downloads (runtime artifacts - not committed)
 downloads/
