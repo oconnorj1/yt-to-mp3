@@ -15,14 +15,32 @@ Paste a YouTube link, get an MP3. Containerized, one command to run.
 docker compose up --build
 ```
 
-### Pull from Docker Hub
+### Use pre-built images with Docker Compose
+
+```yaml
+services:
+  backend:
+    image: oconnorj00/yt-to-mp3-backend:latest
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  frontend:
+    image: oconnorj00/yt-to-mp3-frontend:latest
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    restart: unless-stopped
+```
 
 ```bash
-docker pull oconnorj00/yt-to-mp3-backend:latest
-docker pull oconnorj00/yt-to-mp3-frontend:latest
+docker compose up
 ```
 
 Open [http://localhost:8080](http://localhost:8080), paste a YouTube URL, click Download.
+- Frontend: port **8080**
+- Backend API: port **3001**
 
 ## Features
 
