@@ -5,7 +5,7 @@
 </p>
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/oconnorj00/yt-to-mp3)](https://hub.docker.com/r/oconnorj00/yt-to-mp3 "Docker Pulls")
-[![Docker Image Size](https://img.shields.io/docker/image-size/oconnorj00/yt-to-mp3)](https://hub.docker.com/r/oconnorj00/yt-to-mp3 "Docker Image Size")
+[![Docker Image Size](https://img.shields.io/docker/image-size/oconnorj00/yt-to-mp3/latest)](https://hub.docker.com/r/oconnorj00/yt-to-mp3 "Docker Image Size")
 
 Paste a YouTube link, get an MP3. Containerized, one command to run.
 
