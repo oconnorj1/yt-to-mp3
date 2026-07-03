@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import UrlInput from './components/UrlInput';
 import ProgressBar from './components/ProgressBar';
+import TrackList from './components/TrackList';
+
+interface TrackFile {
+  filename: string;
+}
 
 const API_BASE = '/api';
 
@@ -10,6 +15,8 @@ function App() {
   const [progress, setProgress] = useState(0);
   const [jobStatus, setJobStatus] = useState<'idle' | 'pending' | 'downloading' | 'completed' | 'failed'>('idle');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [files, setFiles] = useState<TrackFile[]>([]);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -61,6 +68,8 @@ function App() {
       }
 
       const { id } = await res.json();
+      setJobId(id);
+      setFiles([]);
       setJobStatus('downloading');
 
       const es = new EventSource(`${API_BASE}/jobs/${id}/progress`);
@@ -77,10 +86,19 @@ function App() {
           es.close();
           eventSourceRef.current = null;
 
-          const a = document.createElement('a');
-          a.href = `${API_BASE}/jobs/${id}/file`;
-          a.download = data.filename || 'audio.mp3';
-          a.click();
+          const trackFiles: TrackFile[] = data.files || [];
+
+          if (data.isPlaylist && trackFiles.length > 1) {
+            setFiles(trackFiles);
+          } else {
+            const link = document.createElement('a');
+            link.href = `${API_BASE}/jobs/${id}/file`;
+            link.download = data.filename || 'audio.mp3';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
         } else if (data.type === 'failed') {
           setJobStatus('failed');
           setError(data.error || 'Download failed');
@@ -111,6 +129,8 @@ function App() {
     setJobStatus('idle');
     setError(null);
     setProgress(0);
+    setJobId(null);
+    setFiles([]);
   };
 
   return (
@@ -142,6 +162,9 @@ function App() {
         <UrlInput onDownload={handleSubmit} loading={loading} />
         {(jobStatus === 'pending' || jobStatus === 'downloading' || jobStatus === 'completed') && (
           <ProgressBar progress={progress} status={jobStatus} />
+        )}
+        {jobStatus === 'completed' && files.length > 0 && jobId && (
+          <TrackList files={files} jobId={jobId} startIndex={0} onRetry={handleRetry} />
         )}
         {error && (
           <div className="error-block">

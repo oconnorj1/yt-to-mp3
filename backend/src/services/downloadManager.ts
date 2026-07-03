@@ -4,6 +4,11 @@ import fs from 'fs';
 import os from 'os';
 import crypto from 'crypto';
 
+export interface JobFile {
+  filename: string;
+  path: string;
+}
+
 export interface Job {
   id: string;
   url: string;
@@ -12,6 +17,8 @@ export interface Job {
   error?: string;
   filePath?: string;
   filename?: string;
+  files: JobFile[];
+  isPlaylist: boolean;
   tmpDir: string;
   createdAt: number;
 }
@@ -48,10 +55,15 @@ function cleanupJob(id: string) {
   sseClients.delete(id);
 }
 
+function hasPlaylistParam(url: string): boolean {
+  return /[?&]list=/.test(url);
+}
+
 export function createJob(url: string): Job {
   const id = crypto.randomUUID();
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yt-dlp-'));
-  const job: Job = { id, url, status: 'pending', progress: 0, tmpDir, createdAt: Date.now() };
+  const isPlaylist = hasPlaylistParam(url);
+  const job: Job = { id, url, status: 'pending', progress: 0, files: [], isPlaylist, tmpDir, createdAt: Date.now() };
   jobs.set(id, job);
   startDownload(job);
   return { ...job };
@@ -59,21 +71,31 @@ export function createJob(url: string): Job {
 
 function startDownload(job: Job) {
   job.status = 'downloading';
-  const outputTemplate = path.join(job.tmpDir, '%(title)s.%(ext)s');
 
-  const ytProcess = spawn('yt-dlp', [
+  const args: string[] = [
     '--socket-timeout', '30',
     '--retries', '3',
     '--retry-sleep', '5',
+    '--ignore-errors',
     job.url,
     '-x',
     '--audio-format', 'mp3',
     '--audio-quality', '0',
-    '-o', outputTemplate,
-    '--no-playlist',
     '--no-warnings',
     '--newline',
-  ]);
+  ];
+
+  const outputTemplate = job.isPlaylist
+    ? path.join(job.tmpDir, '%(playlist_index)s - %(title)s.%(ext)s')
+    : path.join(job.tmpDir, '%(title)s.%(ext)s');
+
+  args.push('-o', outputTemplate);
+
+  if (!job.isPlaylist) {
+    args.push('--no-playlist');
+  }
+
+  const ytProcess = spawn('yt-dlp', args);
 
   processes.set(job.id, ytProcess);
 
@@ -126,31 +148,38 @@ function startDownload(job: Job) {
   });
 
   ytProcess.on('close', (code) => {
+    console.log(`[downloadManager] yt-dlp closed for job ${job.id} with code ${code}`);
     clearInterval(progressTimer);
     processes.delete(job.id);
     clearTimeout(processTimeout);
-    if (code !== 0) {
+
+    const allFiles = fs.readdirSync(job.tmpDir);
+    const mp3Files = allFiles.filter(f => f.endsWith('.mp3'));
+    if (mp3Files.length === 0) {
       job.status = 'failed';
-      job.error = processOutput.trim() || `Process exited with code ${code}`;
+      job.error = processOutput.trim() || (code !== 0 ? `Process exited with code ${code}` : 'Output file not found');
       emitEvent(job.id, { type: 'failed', error: job.error });
       return;
     }
 
-    const files = fs.readdirSync(job.tmpDir);
-    const mp3File = files.find(f => f.endsWith('.mp3'));
-    if (!mp3File) {
-      job.status = 'failed';
-      job.error = 'Output file not found';
-      emitEvent(job.id, { type: 'failed', error: job.error });
-      return;
-    }
+    job.files = mp3Files.map(f => ({
+      filename: f,
+      path: path.join(job.tmpDir, f),
+    }));
 
-    const filePath = path.join(job.tmpDir, mp3File);
+    job.filePath = job.files[0].path;
+    job.filename = job.files[0].filename;
+
     job.status = 'completed';
     job.progress = 100;
-    job.filePath = filePath;
-    job.filename = mp3File;
-    emitEvent(job.id, { type: 'completed', progress: 100, filename: mp3File });
+    console.log(`[downloadManager] Job ${job.id} completed. files[0]=${job.filename}, total files=${job.files.length}, filePath exists=${fs.existsSync(job.filePath!)}`);
+    emitEvent(job.id, {
+      type: 'completed',
+      progress: 100,
+      filename: job.filename,
+      files: job.files.map(f => ({ filename: f.filename })),
+      isPlaylist: job.isPlaylist,
+    });
   });
 
   ytProcess.on('error', (err) => {
@@ -177,7 +206,13 @@ export function subscribe(jobId: string, onEvent: (data: string) => void): () =>
   const job = jobs.get(jobId);
   if (job) {
     if (job.status === 'completed') {
-      onEvent(JSON.stringify({ type: 'completed', progress: 100, filename: job.filename }));
+      onEvent(JSON.stringify({
+        type: 'completed',
+        progress: 100,
+        filename: job.filename,
+        files: job.files.map(f => ({ filename: f.filename })),
+        isPlaylist: job.isPlaylist,
+      }));
     } else if (job.status === 'failed') {
       onEvent(JSON.stringify({ type: 'failed', error: job.error }));
     } else if (job.status === 'downloading' && job.progress > 0) {

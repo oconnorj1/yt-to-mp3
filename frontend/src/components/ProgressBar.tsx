@@ -15,6 +15,8 @@ function ProgressBar({ progress, status }: ProgressBarProps) {
     );
   }
 
+  const label = status === 'completed' ? 'Complete!' : `${Math.round(progress)}%`;
+
   return (
     <div className="progress-bar-container">
       <div className="progress-bar-track">
@@ -23,7 +25,7 @@ function ProgressBar({ progress, status }: ProgressBarProps) {
           style={{ width: `${Math.min(progress, 100)}%` }}
         />
       </div>
-      <span className="progress-bar-label">{Math.round(progress)}%</span>
+      <span className="progress-bar-label">{label}</span>
     </div>
   );
 }
