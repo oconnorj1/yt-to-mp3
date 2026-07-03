@@ -53,6 +53,7 @@ Open [http://localhost:8080](http://localhost:8080), paste a YouTube URL, click 
 ## Features
 
 - One-click YouTube audio extraction
+- Playlist support — download entire playlists with individual track selection
 - Runs entirely in Docker — no local dependencies needed
 - React frontend with loading and error states
 - yt-dlp + ffmpeg under the hood for best-quality MP3s
@@ -88,16 +89,21 @@ A single container runs both the React frontend (served as static files) and the
 ├── backend/             Express API
 │   └── src/
 │       ├── index.ts           Server entry
-│       └── routes/download.ts POST /api/download
+│       ├── routes/jobs.ts     API endpoints
+│       └── services/
+│           └── downloadManager.ts  yt-dlp process management
 ├── frontend/            React + Vite app
 │   ├── src/
 │   │   ├── App.tsx            Main component
 │   │   ├── components/
-│   │   │   └── UrlInput.tsx   URL input + download button
+│   │   │   ├── UrlInput.tsx   URL input + download button
+│   │   │   ├── ProgressBar.tsx  SSE progress bar
+│   │   │   └── TrackList.tsx    Multi-track playlist UI
 │   │   └── main.tsx           App entry
-│   └── nginx/default.conf     Nginx proxy config (deprecated)
+│   └── index.css              Theme + layout styles
 ├── e2e/                 Playwright tests
 │   └── tests/download.spec.ts
+├── DOCKERHUB.md         Docker Hub description
 ├── docker-compose.yml
 └── Dockerfile
 ```

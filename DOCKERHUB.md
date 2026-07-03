@@ -47,6 +47,7 @@ yt-to-mp3 is a self-hosted web app that extracts high-quality MP3 audio from You
 ## Features
 
 - **One-click** — paste a URL, download an MP3
+- **Playlist support** — download entire playlists with individual track selection
 - **Fully containerized** — nothing to install besides Docker
 - **Real-time progress** — see download progress as it happens
 - **Dark mode** — easy on the eyes

@@ -59,14 +59,38 @@ jobsRouter.get('/jobs/:id/file', (req, res) => {
     return;
   }
 
+  console.log(`[jobs] File requested: job=${id}, filePath=${job.filePath}, filename=${job.filename}`);
   res.download(job.filePath, job.filename!, (err) => {
     if (err) {
       console.error('Download error:', err);
     }
-    setTimeout(() => {
-      try {
-        fs.rmSync(job.tmpDir, { recursive: true, force: true });
-      } catch {}
-    }, 5000);
+  });
+});
+
+jobsRouter.get('/jobs/:id/files/:fileIndex', (req, res) => {
+  const { id, fileIndex } = req.params;
+
+  const job = getJob(id);
+  if (!job) {
+    res.status(404).json({ error: 'Job not found' });
+    return;
+  }
+
+  if (job.status !== 'completed') {
+    res.status(400).json({ error: 'File not ready', status: job.status });
+    return;
+  }
+
+  const index = parseInt(fileIndex, 10);
+  if (isNaN(index) || index < 0 || index >= job.files.length) {
+    res.status(404).json({ error: 'File not found' });
+    return;
+  }
+
+  const file = job.files[index];
+  res.download(file.path, file.filename, (err) => {
+    if (err) {
+      console.error('Download error:', err);
+    }
   });
 });
