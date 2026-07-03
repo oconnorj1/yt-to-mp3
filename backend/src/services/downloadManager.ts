@@ -72,6 +72,7 @@ function startDownload(job: Job) {
     '-o', outputTemplate,
     '--no-playlist',
     '--no-warnings',
+    '--newline',
   ]);
 
   processes.set(job.id, ytProcess);
@@ -86,24 +87,51 @@ function startDownload(job: Job) {
     }
   }, 10 * 60 * 1000);
 
-  let stderrOutput = '';
+  let processOutput = '';
+  let lastEmittedProgress = -1;
+  const pendingProgress: number[] = [];
+  let seqIndex = 0;
 
-  ytProcess.stderr.on('data', (data: Buffer) => {
+  const progressTimer = setInterval(() => {
+    if (seqIndex < pendingProgress.length) {
+      const next = pendingProgress[seqIndex];
+      seqIndex++;
+      if (next !== lastEmittedProgress) {
+        lastEmittedProgress = next;
+        job.progress = next;
+        emitEvent(job.id, { type: 'progress', progress: next });
+      }
+    }
+  }, 250);
+
+  ytProcess.stdout?.on('data', (data: Buffer) => {
     const text = data.toString();
-    stderrOutput += text;
-    const match = text.match(/\[download\]\s+(\d+\.?\d*)%/);
-    if (match) {
-      job.progress = parseFloat(match[1]);
-      emitEvent(job.id, { type: 'progress', progress: job.progress });
+    processOutput += text;
+    const lines = text.split('\n');
+    for (const line of lines) {
+      for (const part of line.split('\r')) {
+        const match = part.match(/\[download\]\s+(\d+\.?\d*)%/);
+        if (match) {
+          const pct = parseFloat(match[1]);
+          if (pendingProgress.length === 0 || pct !== pendingProgress[pendingProgress.length - 1]) {
+            pendingProgress.push(pct);
+          }
+        }
+      }
     }
   });
 
+  ytProcess.stderr?.on('data', (data: Buffer) => {
+    processOutput += data.toString();
+  });
+
   ytProcess.on('close', (code) => {
+    clearInterval(progressTimer);
     processes.delete(job.id);
     clearTimeout(processTimeout);
     if (code !== 0) {
       job.status = 'failed';
-      job.error = stderrOutput.trim() || `Process exited with code ${code}`;
+      job.error = processOutput.trim() || `Process exited with code ${code}`;
       emitEvent(job.id, { type: 'failed', error: job.error });
       return;
     }
